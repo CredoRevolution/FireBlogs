@@ -1,5 +1,6 @@
 const { defineConfig } = require('@vue/cli-service')
 module.exports = defineConfig({
+  publicPath: process.env.NODE_ENV === 'production' ? '/FireBlogs/' : '/',
   transpileDependencies: true,
   chainWebpack: (config) => {
       const svgRule = config.module.rule('svg')
