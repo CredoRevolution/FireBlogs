@@ -5,7 +5,7 @@
       <div class="admin-info">
         <h2>Add Admin</h2>
         <div class="input">
-          <input placeholder="Enter user email to make them an admin" type="text" id="addAdmins" v-model="adminEmail" />
+          <input placeholder="Enter user email to make them an admin" type="email" id="addAdmins" v-model="adminEmail" />
         </div>
         <span>{{ this.functionMsg }}</span>
         <button @click="addAdmin" class="button">Submit</button>
@@ -15,8 +15,7 @@
 </template>
 
 <script>
-import firebase from "firebase/app";
-import "firebase/functions";
+import { getFunctions, httpsCallable } from "firebase/functions";
 export default {
   name: "Admin",
   data() {
@@ -27,9 +26,38 @@ export default {
   },
   methods: {
     async addAdmin() {
-      const addAdmin = await firebase.functions().httpsCallable("addAdminRole");
-      const result = await addAdmin({ email: this.adminEmail });
-      this.functionMsg = result.data.message;
+      // Basic email validation
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(this.adminEmail)) {
+        this.functionMsg = "Please enter a valid email address";
+        return;
+      }
+
+      try {
+        // Get the functions instance with the specified region
+        // Ensure we're using the same region as specified in the function definition
+        const functions = getFunctions(undefined, 'us-central1');
+
+        // Create the callable function
+        const addAdminRole = httpsCallable(functions, "addAdminRole");
+
+        // Prepare the email
+        const trimmedEmail = this.adminEmail.trim();
+        console.log("Sending email:", trimmedEmail);
+        // Create the payload with the email
+        const payload = { email: trimmedEmail };
+        // Call the function with the payload
+        const result = await addAdminRole(payload);
+        // Update the UI with the response message
+        this.functionMsg = result.data.message;
+      } catch (error) {
+        // Log and display any errors
+        console.error("Error:", error);
+        console.error("Error code:", error.code);
+        console.error("Error message:", error.message);
+        console.error("Error details:", error.details);
+        this.functionMsg = error.message || "An error occurred while adding admin";
+      }
     },
   },
 };

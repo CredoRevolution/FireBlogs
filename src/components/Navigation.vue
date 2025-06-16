@@ -39,6 +39,9 @@ export default {
   computed:{
     user() {
       return this.$store.state.user
+    },
+    isAdmin() {
+      return this.$store.state.profileAdmin
     }
   },
   created() {
@@ -63,7 +66,7 @@ export default {
         <ul v-show="!mobile">
           <router-link class="link" :to="{name: 'Home'}">Home</router-link>
           <router-link class="link" :to="{name: 'Blogs'}">Blogs</router-link>
-          <router-link class="link" to="#">Create Post</router-link>
+          <router-link class="link" :to="{name: 'CreatePost'}" v-if="isAdmin">Create Post</router-link>
           <router-link class="link" :to="{name: 'Login'}" v-if="!user">Login/Register</router-link>
         </ul>
         <div class="profile" ref="profile" @click="toggleProfile" v-if="user">
@@ -108,7 +111,7 @@ export default {
         <ul class="mobile-nav" v-show="mobileNav">
           <router-link class="link" :to="{name: 'Home'}">Home</router-link>
           <router-link class="link" :to="{name: 'Blogs'}">Blogs</router-link>
-          <router-link class="link" to="#">Create Post</router-link>
+          <router-link class="link" :to="{name: 'CreatePost'}" v-if="isAdmin">Create Post</router-link>
           <router-link class="link" :to="{name: 'Login'}" v-if="!user">Login/Register</router-link>
         </ul>
     </transition>

@@ -67,6 +67,14 @@ const routes = [
       title: "Admin",
     }
   },
+  {
+    path: "/create-post",
+    name: "CreatePost",
+    component: () => import("@/views/CreatePost.vue"),
+    meta: {
+      title: "Create Post",
+    }
+  }
 ];
 
 const router = new VueRouter({

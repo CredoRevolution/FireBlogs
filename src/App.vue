@@ -24,14 +24,12 @@ export default {
       navigation: null,
     };
   },
-  created() {
+  async created() {
     const auth = getAuth()
     onAuthStateChanged(auth, (user) => {
-      console.log('32112')
       this.$store.commit('updateUser', user)
       if (user) {
-        this.$store.dispatch('getCurrentUser')
-        console.log(this.$store.state.user)
+        this.$store.dispatch('getCurrentUser',user)
       }
     })
   },

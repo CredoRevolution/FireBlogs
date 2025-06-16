@@ -24,7 +24,7 @@
           <ul>
             <router-link class="link" :to="{ name: 'Home' }">Home</router-link>
             <router-link class="link" :to="{ name: 'Blogs' }">Blogs</router-link>
-            <router-link class="link" :to="{ name: 'CreatePost' }">Create Post</router-link>
+            <router-link class="link" :to="{ name: 'CreatePost' }" v-if="isAdmin">Create Post</router-link>
             <router-link class="link" :to="{ name: 'Login' }" v-if="!user">Login In / Register</router-link>
           </ul>
         </div>
@@ -47,6 +47,9 @@ export default {
     user() {
       return this.$store.state.user;
     },
+    isAdmin() {
+      return this.$store.state.profileAdmin;
+    }
   },
 };
 </script>

@@ -32,14 +32,35 @@ export default new Vuex.Store({
     ],
     editPost: null,
     user: null,
+    profileAdmin: null,
     profileEmail: null,
     profileFirstName: null,
     profileLastName: null,
     profileUsername: null,
     profileId: null,
-    profileInitials: null
+    profileInitials: null,
+    blogTitle: "",
+    blogHTML: "",
+    blogPhotoName: "",
+    blogPhotoFileURL: "",
+    blogPhotoPreview: false
   },
   mutations: {
+    newBlogPost(state, payload) {
+      state.blogHTML = payload
+    },
+    updateBlogTitle(state, payload) {
+      state.blogTitle = payload
+    },
+    fileNameChange(state, payload) {
+      state.blogPhotoName = payload
+    },
+    createFileURL(state, payload) {
+      state.blogPhotoFileURL = payload
+    },
+    openPhotoPreview(state) {
+      state.blogPhotoPreview = !state.blogPhotoPreview
+    },
     updateUser(state, payload) {
       state.user = payload || null
       if (!payload) {
@@ -68,10 +89,13 @@ export default new Vuex.Store({
     },
     changeUsername(state, payload) {
       state.profileUsername = payload
+    },
+    setProfileAdmin(state, payload) {
+      state.profileAdmin = payload
     }
   },
   actions: {
-    async getCurrentUser({commit, state}) {
+    async getCurrentUser({commit, state}, user) {
       const firebaseAuth = getAuth()
       if (firebaseAuth.currentUser) {
         const collectionRef = collection(db, "users")
@@ -85,6 +109,14 @@ export default new Vuex.Store({
           state.profileLastName = userData.lastName
           state.profileUsername = userData.username
           state.profileInitials = userData.firstName.charAt(0) + userData.lastName.charAt(0)
+          let isAdmin = false
+          if(user){
+            const token = await user.getIdTokenResult()
+            if(token.claims.admin){
+              isAdmin = true
+            }
+          }
+          commit('setProfileAdmin', isAdmin)
         } else {
           console.log("No such document!")
         }
