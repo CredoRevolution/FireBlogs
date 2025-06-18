@@ -1,6 +1,6 @@
 <template>
   <div class="app-wrapper">
-    <div class="app">
+    <div class="app" v-if="$store.state.postLoaded">
       <Navigation v-if="navigation"/>
       <router-view />
       <FooterVue v-if="navigation"/>
@@ -32,6 +32,7 @@ export default {
         this.$store.dispatch('getCurrentUser',user)
       }
     })
+    this.$store.dispatch('getPosts')
   },
   mounted() {},
   methods: {

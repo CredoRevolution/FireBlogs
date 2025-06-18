@@ -1,6 +1,6 @@
 import Vue from 'vue'
 import Vuex from 'vuex'
-import {collection, addDoc, getDoc, doc, updateDoc} from "firebase/firestore"
+import {collection, addDoc, getDoc,getDocs, doc, updateDoc, query, orderBy,deleteDoc, where} from "firebase/firestore"
 import {getAuth} from "firebase/auth"
 import db from "../firebase/firebaseInit.js"
 
@@ -8,28 +8,8 @@ Vue.use(Vuex)
 
 export default new Vuex.Store({
   state: {
-    sampleBlogCards: [
-      {
-        blogTitle: "Blog Card #1",
-        blogCoverPhoto: "stock-1",
-        blogDate: "May 1, 2021",
-      },
-      {
-        blogTitle: "Blog Card #2",
-        blogCoverPhoto: "stock-2",
-        blogDate: "May 2, 2021",
-      },
-      {
-        blogTitle: "Blog Card #3",
-        blogCoverPhoto: "stock-3",
-        blogDate: "May 3, 2021",
-      },
-      {
-        blogTitle: "Blog Card #4",
-        blogCoverPhoto: "stock-4",
-        blogDate: "May 4, 2021",
-      },
-    ],
+    blogPosts: [],
+    postLoaded: false,
     editPost: null,
     user: null,
     profileAdmin: null,
@@ -44,6 +24,10 @@ export default new Vuex.Store({
     blogPhotoName: "",
     blogPhotoFileURL: "",
     blogPhotoPreview: false
+  },
+  getters: {
+    blogPostFeed: (state) => state.blogPosts.slice(0, 2),
+    blogPostCards: (state) => state.blogPosts.slice(2,6),
   },
   mutations: {
     newBlogPost(state, payload) {
@@ -92,6 +76,12 @@ export default new Vuex.Store({
     },
     setProfileAdmin(state, payload) {
       state.profileAdmin = payload
+    },
+    setBlogState(state, payload) {
+      state.blogTitle = payload.blogTitle
+      state.blogHTML = payload.blogHTML
+      state.blogPhotoName = payload.blogCoverPhotoName
+      state.blogPhotoFileURL = payload.blogCoverPhoto
     }
   },
   actions: {
@@ -133,7 +123,52 @@ export default new Vuex.Store({
         lastName: state.profileLastName,
         username: state.profileUsername
       })
-    }
+    },
+    async getPosts({state}) {
+
+      const dataBase = collection(db, "blogPosts")
+      const q = query(dataBase, orderBy("date", "desc"))
+      const dbResponse = await getDocs(q)
+      state.blogPosts = []
+      dbResponse.forEach((doc) => {
+          if(!state.blogPosts.some(post => post.blogId === doc.data().blogId)) {
+              const data = {
+                blogId: doc.data().blogId,
+                blogCoverPhoto: doc.data().blogCoverPhoto,
+                blogTitle: doc.data().blogTitle,
+                blogDate: doc.data().date,
+                blogHTML: doc.data().blogHTML,
+                blogCoverPhotoName: doc.data().blogCoverPhotoName
+              }
+              state.blogPosts.push(data)
+          }
+      })
+      state.postLoaded = true
+    },
+    async deletePost({state,commit}, payload) {
+      try {
+        const postsRef = collection(db, "blogPosts");
+        const q = query(postsRef, where("blogId", "==", payload));
+        const querySnapshot = await getDocs(q);
+
+        if (!querySnapshot.empty) {
+          // Get the first document that matches the blogId
+          const docToDelete = querySnapshot.docs[0];
+          await deleteDoc(doc(db, "blogPosts", docToDelete.id));
+
+          // Remove the post from the state
+          const index = state.blogPosts.findIndex(post => post.blogId === payload);
+          if (index !== -1) {
+            state.blogPosts.splice(index, 1);
+          }
+        } else {
+          console.error("No post found with blogId:", payload);
+        }
+      } catch (error) {
+        console.error("Error deleting post:", error);
+      }
+    },
+
   },
   modules: {
   }

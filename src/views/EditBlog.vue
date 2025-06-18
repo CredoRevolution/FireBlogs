@@ -21,8 +21,8 @@
         <vue-editor :editorOptions="editorSettings" v-model="blogHTML" useCustomImageHandler @image-added="imageHandler" />
       </div>
       <div class="blog-actions">
-        <button @click="uploadBlog">Publish Blog</button>
-        <router-link class="router-button" :to="{ name: 'BlogPreview' }">Post Preview</router-link>
+        <button @click="updatedBlog">Save Changes</button>
+        <router-link class="router-button" :to="{ name: 'BlogPreview' }">Preview Changes</router-link>
       </div>
     </div>
   </div>
@@ -32,7 +32,7 @@
 import BlogCoverPreview from "../components/BlogCoverPreview";
 import Loading from "../components/Loading";
 import { getStorage, ref, uploadBytesResumable, getDownloadURL } from "firebase/storage";
-import {collection, addDoc, getDoc, doc, updateDoc} from "firebase/firestore"
+import {collection, addDoc, getDoc, doc, updateDoc, query, where, getDocs, deleteDoc} from "firebase/firestore"
 import db from "../firebase/firebaseInit";
 import Quill from "quill";
 window.Quill = Quill;
@@ -46,6 +46,8 @@ export default {
       error: null,
       errorMsg: null,
       loading: null,
+      routeId: null,
+      currentBlog: null,
       editorSettings: {
         modules: {
           imageResize: {},
@@ -56,6 +58,13 @@ export default {
   components: {
     BlogCoverPreview,
     Loading,
+  },
+  async mounted() {
+    this.routeId = this.$route.params.blogid
+    this.currentBlog = this.$store.state.blogPosts.filter((post) => {
+      return post.blogId == this.routeId
+    })
+    this.$store.commit('setBlogState', this.currentBlog[0])
   },
   methods: {
     fileChange() {
@@ -89,13 +98,16 @@ export default {
           }
       );
     },
-    uploadBlog() {
+    async updatedBlog() {
       if(this.blogTitle.length !== 0 && this.blogHTML.length !== 0) {
+        const postsRef = collection(db, "blogPosts");
+        const q = query(postsRef, where("blogId", "==", this.routeId));
+        const querySnapshot = await getDocs(q);
+        console.log(querySnapshot)
         if(this.file){
           this.loading = true;
           const storage = getStorage();
           const storageRef = ref(storage, `documents/blogCoverPhotos/${this.blogCoverPhotoName}`);
-
           const uploadTask = uploadBytesResumable(storageRef, this.file);
           uploadTask.on(
               "state_changed",
@@ -107,30 +119,39 @@ export default {
               },
               async () => {
                 const downloadURL = await getDownloadURL(storageRef);
-                const timestamp = await Date.now();
-                const collectionRef = collection(db, "blogPosts")
-                await addDoc(collectionRef, {
-                  blogCoverPhoto: downloadURL,
-                  blogCoverPhotoName: this.blogCoverPhotoName,
-                  blogTitle: this.blogTitle,
-                  blogHTML: this.blogHTML,
-                  blogId: timestamp,
-                  profileId: this.profileId,
-                  date: timestamp
-                })
-                await this.$store.dispatch("getPosts");
-                this.loading = false;
-                this.$router.push({ name: "ViewBlog", params: { blogid: timestamp } });
+                if (!querySnapshot.empty) {
+                  // Get the first document that matches the blogId
+                  const docToUpdate = querySnapshot.docs[0];
+                  const docRef = doc(db, "blogPosts", docToUpdate.id);
+                  await updateDoc(docRef, {
+                    blogCoverPhoto: downloadURL,
+                    blogCoverPhotoName: this.blogCoverPhotoName,
+                    blogTitle: this.blogTitle,
+                    blogHTML: this.blogHTML,
+                  })
+                  await this.$store.dispatch("getPosts");
+                  this.$router.push({ name: "ViewBlog", params: { blogid: this.routeId } });
+                }
               }
-
           )
+          this.loading = false;
+          return
         }
-        this.error = true;
-        this.errorMsg = "Please ensure you uploaded a blog cover photo!";
-        setTimeout(()=>{
-          this.error = false;
-          this.errorMsg = null;
-        }, 5000)
+
+        if (!querySnapshot.empty) {
+          this.loading = true;
+          // Get the first document that matches the blogId
+          const docToUpdate = querySnapshot.docs[0];
+          const docRef = doc(db, "blogPosts", docToUpdate.id);
+          await updateDoc(docRef, {
+            blogTitle: this.blogTitle,
+            blogHTML: this.blogHTML
+          });
+          await this.$store.dispatch("getPosts", docToUpdate);
+          this.loading = false;
+          this.$router.push({ name: "ViewBlog", params: { blogid: this.routeId } });
+          return
+        }
       }
 
       this.error = true;
